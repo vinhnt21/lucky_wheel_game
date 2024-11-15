@@ -17,17 +17,30 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        background-image: url("bg.png");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
         font-family: Arial, sans-serif;
         padding: 20px;
       }
 
       .game-container {
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
         border-radius: 20px;
         padding: 30px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 10px 30px rgba(255, 192, 203, 0.4);
         text-align: center;
+        border: 3px solid #ff69b4;
+        max-width: 95%;
+        margin: 0 auto;
+      }
+
+      h1 {
+        color: #ff1493;
+        margin-bottom: 20px;
+        font-size: 2rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .slots-container {
@@ -35,40 +48,42 @@
         gap: 10px;
         margin: 20px 0;
         justify-content: center;
+        flex-wrap: wrap;
       }
 
       .slot {
         width: 200px;
         height: 200px;
-        border: 5px solid #gold;
+        border: 5px solid #ff69b4;
         border-radius: 10px;
         overflow: hidden;
         background: #fff;
         position: relative;
+        box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3);
       }
 
       .slot img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 0.2s;
+        transition: transform 0.1s;
       }
 
       .slot.spinning img {
-        animation: spin 0.2s linear infinite;
+        animation: slideImages 0.5s linear infinite;
       }
 
-      @keyframes spin {
+      @keyframes slideImages {
         0% {
           transform: translateY(0);
         }
         100% {
-          transform: translateY(-100%);
+          transform: translateY(-300%);
         }
       }
 
       .spin-button {
-        background: #4caf50;
+        background: #ff69b4;
         color: white;
         border: none;
         padding: 15px 30px;
@@ -77,15 +92,16 @@
         cursor: pointer;
         transition: all 0.3s ease;
         margin: 20px 0;
+        min-width: 150px;
       }
 
       .spin-button:hover {
-        background: #45a049;
+        background: #ff1493;
         transform: scale(1.05);
       }
 
       .spin-button:disabled {
-        background: #cccccc;
+        background: #ffb6c1;
         cursor: not-allowed;
       }
 
@@ -93,11 +109,11 @@
         font-size: 24px;
         margin: 20px 0;
         min-height: 36px;
-        color: #333;
+        color: #ff1493;
       }
 
       .win-message {
-        color: #4caf50;
+        color: #ff1493;
         animation: pop 0.5s ease;
       }
 
@@ -116,7 +132,51 @@
       .stats {
         margin-top: 20px;
         font-size: 16px;
-        color: #666;
+        color: #ff69b4;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .game-container {
+          padding: 15px;
+        }
+
+        h1 {
+          font-size: 1.5rem;
+        }
+
+        .slots-container {
+          gap: 5px;
+        }
+
+        .slot {
+          width: 150px;
+          height: 150px;
+        }
+
+        .message {
+          font-size: 20px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .slot {
+          width: 100px;
+          height: 100px;
+        }
+
+        .spin-button {
+          padding: 10px 20px;
+          font-size: 16px;
+        }
+
+        .message {
+          font-size: 16px;
+        }
+
+        .stats {
+          font-size: 14px;
+        }
       }
     </style>
   </head>
@@ -125,13 +185,13 @@
       <h1>Quay May Mắn</h1>
       <div class="slots-container">
         <div class="slot" id="slot1">
-          <img src="imgs/empty.png" alt="Slot 1" />
+          <img src="img1.png" alt="Slot 1" />
         </div>
         <div class="slot" id="slot2">
-          <img src="imgs/empty.png" alt="Slot 2" />
+          <img src="img1.png" alt="Slot 2" />
         </div>
         <div class="slot" id="slot3">
-          <img src="imgs/empty.png" alt="Slot 3" />
+          <img src="img1.png" alt="Slot 3" />
         </div>
       </div>
       <button class="spin-button" id="spinButton">Quay!</button>
@@ -150,32 +210,14 @@
           this.spinCount = document.getElementById("spinCount");
           this.totalSpins = 0;
           this.isSpinning = false;
-          this.images = [
-            "img1.png",
-            "img2.png",
-            "img3.png",
-            "img4.png",
-            "img5.png",
-          ];
-          this.sounds = {
-            spin: new Audio("sounds/spin.mp3"),
-            win: new Audio("sounds/win.mp3"),
-            lose: new Audio("sounds/lose.mp3"),
-          };
+          this.images = ["img1.png", "img2.png", "img3.png"];
+          this.currentImages = this.images.map(() => 0);
 
           this.initializeGame();
         }
 
         initializeGame() {
           this.spinButton.addEventListener("click", () => this.spin());
-          this.preloadImages();
-        }
-
-        preloadImages() {
-          this.images.forEach((img) => {
-            const image = new Image();
-            image.src = `imgs/${img}`;
-          });
         }
 
         async spin() {
@@ -187,38 +229,44 @@
           this.totalSpins++;
           this.spinCount.textContent = this.totalSpins;
 
-          // Play spin sound
-          this.sounds.spin.play();
-
           // Start spinning animation
-          this.slots.forEach((slot) => slot.classList.add("spinning"));
+          this.slots.forEach((slot) => {
+            slot.classList.add("spinning");
+            // Simulate image changes during spin
+            let currentIndex = 0;
+            const intervalId = setInterval(() => {
+              slot.querySelector("img").src = this.images[currentIndex];
+              currentIndex = (currentIndex + 1) % this.images.length;
+            }, 100);
+
+            // Store the interval ID to clear it later
+            slot.dataset.intervalId = intervalId;
+          });
 
           // Generate random results
           const results = this.slots.map(
             () => this.images[Math.floor(Math.random() * this.images.length)]
           );
 
-          // Simulate spinning delay
-          await this.delay(2000);
-
-          // Stop spinning and show results
-          this.slots.forEach((slot, index) => {
+          // Stop spinning after random delays for each slot
+          for (let i = 0; i < this.slots.length; i++) {
+            await this.delay(1000 + i * 500); // Sequential stop
+            const slot = this.slots[i];
+            clearInterval(parseInt(slot.dataset.intervalId));
             slot.classList.remove("spinning");
-            slot.querySelector("img").src = `imgs/${results[index]}`;
-          });
+            slot.querySelector("img").src = results[i];
+          }
 
-          // Check results
+          // Check if all images are the same
           const isWin = results.every((result) => result === results[0]);
 
           // Show result message
           if (isWin) {
-            this.message.textContent = "Bạn thắng rồi! 🎉";
+            this.message.textContent = "Chúc mừng! Bạn đã thắng! 🎉";
             this.message.classList.add("win-message");
-            this.sounds.win.play();
           } else {
-            this.message.textContent = "Chưa thắng, quay lại thử nhé!";
+            this.message.textContent = "Chưa thắng, hãy thử lại nhé!";
             this.message.classList.remove("win-message");
-            this.sounds.lose.play();
           }
 
           await this.delay(500);
