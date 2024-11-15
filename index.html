@@ -59,27 +59,26 @@
         overflow: hidden;
         background: #fff;
         position: relative;
-        box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3);
       }
 
-      .slot img {
+      .slot-inner {
+        position: absolute;
+        width: 100%;
+        transition: transform 0.5s ease-in-out;
+      }
+
+      .slot-item {
+        width: 100%;
+        height: 200px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .slot-item img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        transition: transform 0.1s;
-      }
-
-      .slot.spinning img {
-        animation: slideImages 0.5s linear infinite;
-      }
-
-      @keyframes slideImages {
-        0% {
-          transform: translateY(0);
-        }
-        100% {
-          transform: translateY(-300%);
-        }
       }
 
       .spin-button {
@@ -135,27 +134,16 @@
         color: #ff69b4;
       }
 
-      /* Responsive Design */
       @media (max-width: 768px) {
         .game-container {
           padding: 15px;
         }
-
-        h1 {
-          font-size: 1.5rem;
-        }
-
-        .slots-container {
-          gap: 5px;
-        }
-
         .slot {
           width: 150px;
           height: 150px;
         }
-
-        .message {
-          font-size: 20px;
+        .slot-item {
+          height: 150px;
         }
       }
 
@@ -164,18 +152,8 @@
           width: 100px;
           height: 100px;
         }
-
-        .spin-button {
-          padding: 10px 20px;
-          font-size: 16px;
-        }
-
-        .message {
-          font-size: 16px;
-        }
-
-        .stats {
-          font-size: 14px;
+        .slot-item {
+          height: 100px;
         }
       }
     </style>
@@ -185,13 +163,13 @@
       <h1>Quay May Mắn</h1>
       <div class="slots-container">
         <div class="slot" id="slot1">
-          <img src="img1.png" alt="Slot 1" />
+          <div class="slot-inner"></div>
         </div>
         <div class="slot" id="slot2">
-          <img src="img1.png" alt="Slot 2" />
+          <div class="slot-inner"></div>
         </div>
         <div class="slot" id="slot3">
-          <img src="img1.png" alt="Slot 3" />
+          <div class="slot-inner"></div>
         </div>
       </div>
       <button class="spin-button" id="spinButton">Quay!</button>
@@ -211,13 +189,36 @@
           this.totalSpins = 0;
           this.isSpinning = false;
           this.images = ["img1.png", "img2.png", "img3.png"];
-          this.currentImages = this.images.map(() => 0);
 
+          this.initializeSlots();
           this.initializeGame();
+        }
+
+        initializeSlots() {
+          this.slots.forEach((slot) => {
+            const slotInner = slot.querySelector(".slot-inner");
+            // Tạo 4 bộ hình ảnh để đảm bảo cuộn mượt
+            const items = [
+              ...this.images,
+              ...this.images,
+              ...this.images,
+              ...this.images,
+            ]
+              .map((img) => {
+                return `<div class="slot-item"><img src="${img}" alt="slot item"></div>`;
+              })
+              .join("");
+            slotInner.innerHTML = items;
+            slotInner.style.transform = "translateY(0)";
+          });
         }
 
         initializeGame() {
           this.spinButton.addEventListener("click", () => this.spin());
+        }
+
+        getRandomInt(min, max) {
+          return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
         async spin() {
@@ -229,38 +230,50 @@
           this.totalSpins++;
           this.spinCount.textContent = this.totalSpins;
 
-          // Start spinning animation
-          this.slots.forEach((slot) => {
-            slot.classList.add("spinning");
-            // Simulate image changes during spin
-            let currentIndex = 0;
-            const intervalId = setInterval(() => {
-              slot.querySelector("img").src = this.images[currentIndex];
-              currentIndex = (currentIndex + 1) % this.images.length;
-            }, 100);
+          const results = [];
+          const spinPromises = this.slots.map((slot, index) => {
+            return new Promise((resolve) => {
+              const slotInner = slot.querySelector(".slot-inner");
+              const itemHeight = slot.offsetHeight;
+              const totalItems = this.images.length;
 
-            // Store the interval ID to clear it later
-            slot.dataset.intervalId = intervalId;
+              // Chọn kết quả ngẫu nhiên
+              const randomResult = this.getRandomInt(0, totalItems - 1);
+              // Số vòng quay đầy đủ + vị trí cuối
+              const rotations = 2 + index; // Mỗi slot quay nhiều hơn slot trước
+              const finalPosition = -(randomResult * itemHeight);
+              const totalDistance =
+                rotations * totalItems * itemHeight + finalPosition;
+
+              // Reset vị trí
+              slotInner.style.transition = "none";
+              slotInner.style.transform = "translateY(0)";
+
+              // Force reflow
+              slotInner.offsetHeight;
+
+              // Bắt đầu animation
+              slotInner.style.transition = `transform ${
+                2 + index * 0.5
+              }s cubic-bezier(0.45, 0.05, 0.55, 0.95)`;
+              slotInner.style.transform = `translateY(${-totalDistance}px)`;
+
+              results.push(this.images[randomResult]);
+
+              // Đặt lại vị trí sau khi animation kết thúc
+              setTimeout(() => {
+                slotInner.style.transition = "none";
+                slotInner.style.transform = `translateY(${finalPosition}px)`;
+                resolve();
+              }, (2 + index * 0.5) * 1000);
+            });
           });
 
-          // Generate random results
-          const results = this.slots.map(
-            () => this.images[Math.floor(Math.random() * this.images.length)]
-          );
+          await Promise.all(spinPromises);
 
-          // Stop spinning after random delays for each slot
-          for (let i = 0; i < this.slots.length; i++) {
-            await this.delay(1000 + i * 500); // Sequential stop
-            const slot = this.slots[i];
-            clearInterval(parseInt(slot.dataset.intervalId));
-            slot.classList.remove("spinning");
-            slot.querySelector("img").src = results[i];
-          }
-
-          // Check if all images are the same
+          // Kiểm tra điều kiện thắng
           const isWin = results.every((result) => result === results[0]);
 
-          // Show result message
           if (isWin) {
             this.message.textContent = "Chúc mừng! Bạn đã thắng! 🎉";
             this.message.classList.add("win-message");
@@ -269,17 +282,11 @@
             this.message.classList.remove("win-message");
           }
 
-          await this.delay(500);
           this.spinButton.disabled = false;
           this.isSpinning = false;
         }
-
-        delay(ms) {
-          return new Promise((resolve) => setTimeout(resolve, ms));
-        }
       }
 
-      // Initialize game when page loads
       window.addEventListener("load", () => {
         new LuckySpinGame();
       });
