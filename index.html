@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Game Quay May Mắn</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+
+      .game-container {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        text-align: center;
+      }
+
+      .slots-container {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+        justify-content: center;
+      }
+
+      .slot {
+        width: 200px;
+        height: 200px;
+        border: 5px solid #gold;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+        position: relative;
+      }
+
+      .slot img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.2s;
+      }
+
+      .slot.spinning img {
+        animation: spin 0.2s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: translateY(0);
+        }
+        100% {
+          transform: translateY(-100%);
+        }
+      }
+
+      .spin-button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 18px;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin: 20px 0;
+      }
+
+      .spin-button:hover {
+        background: #45a049;
+        transform: scale(1.05);
+      }
+
+      .spin-button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+      }
+
+      .message {
+        font-size: 24px;
+        margin: 20px 0;
+        min-height: 36px;
+        color: #333;
+      }
+
+      .win-message {
+        color: #4caf50;
+        animation: pop 0.5s ease;
+      }
+
+      @keyframes pop {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.2);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .stats {
+        margin-top: 20px;
+        font-size: 16px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-container">
+      <h1>Quay May Mắn</h1>
+      <div class="slots-container">
+        <div class="slot" id="slot1">
+          <img src="imgs/empty.png" alt="Slot 1" />
+        </div>
+        <div class="slot" id="slot2">
+          <img src="imgs/empty.png" alt="Slot 2" />
+        </div>
+        <div class="slot" id="slot3">
+          <img src="imgs/empty.png" alt="Slot 3" />
+        </div>
+      </div>
+      <button class="spin-button" id="spinButton">Quay!</button>
+      <div class="message" id="message"></div>
+      <div class="stats" id="stats">
+        Số lần quay: <span id="spinCount">0</span>
+      </div>
+    </div>
+
+    <script>
+      class LuckySpinGame {
+        constructor() {
+          this.spinButton = document.getElementById("spinButton");
+          this.message = document.getElementById("message");
+          this.slots = Array.from(document.querySelectorAll(".slot"));
+          this.spinCount = document.getElementById("spinCount");
+          this.totalSpins = 0;
+          this.isSpinning = false;
+          this.images = [
+            "img1.png",
+            "img2.png",
+            "img3.png",
+            "img4.png",
+            "img5.png",
+          ];
+          this.sounds = {
+            spin: new Audio("sounds/spin.mp3"),
+            win: new Audio("sounds/win.mp3"),
+            lose: new Audio("sounds/lose.mp3"),
+          };
+
+          this.initializeGame();
+        }
+
+        initializeGame() {
+          this.spinButton.addEventListener("click", () => this.spin());
+          this.preloadImages();
+        }
+
+        preloadImages() {
+          this.images.forEach((img) => {
+            const image = new Image();
+            image.src = `imgs/${img}`;
+          });
+        }
+
+        async spin() {
+          if (this.isSpinning) return;
+
+          this.isSpinning = true;
+          this.spinButton.disabled = true;
+          this.message.textContent = "";
+          this.totalSpins++;
+          this.spinCount.textContent = this.totalSpins;
+
+          // Play spin sound
+          this.sounds.spin.play();
+
+          // Start spinning animation
+          this.slots.forEach((slot) => slot.classList.add("spinning"));
+
+          // Generate random results
+          const results = this.slots.map(
+            () => this.images[Math.floor(Math.random() * this.images.length)]
+          );
+
+          // Simulate spinning delay
+          await this.delay(2000);
+
+          // Stop spinning and show results
+          this.slots.forEach((slot, index) => {
+            slot.classList.remove("spinning");
+            slot.querySelector("img").src = `imgs/${results[index]}`;
+          });
+
+          // Check results
+          const isWin = results.every((result) => result === results[0]);
+
+          // Show result message
+          if (isWin) {
+            this.message.textContent = "Bạn thắng rồi! 🎉";
+            this.message.classList.add("win-message");
+            this.sounds.win.play();
+          } else {
+            this.message.textContent = "Chưa thắng, quay lại thử nhé!";
+            this.message.classList.remove("win-message");
+            this.sounds.lose.play();
+          }
+
+          await this.delay(500);
+          this.spinButton.disabled = false;
+          this.isSpinning = false;
+        }
+
+        delay(ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+      }
+
+      // Initialize game when page loads
+      window.addEventListener("load", () => {
+        new LuckySpinGame();
+      });
+    </script>
+  </body>
+</html>
